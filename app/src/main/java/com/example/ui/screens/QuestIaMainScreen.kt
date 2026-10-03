@@ -104,7 +104,8 @@ fun QuestIaMainScreen(
   onCreateGuilda: (name: String, schoolName: String, motto: String, city: String, emblem: String) -> Unit,
   onGuildaSearchChanged: (String) -> Unit,
   onUpdateAvatarModel3d: (String) -> Unit,
-  onCompleteQuest: (String) -> Unit = {}
+  onCompleteQuest: (String) -> Unit = {},
+  onOpenSoloTrial: (QuestSubject) -> Unit = {}
 ) {
   if (!uiState.isRegistered) {
     OnboardingScreen(
@@ -158,7 +159,8 @@ fun QuestIaMainScreen(
           trails = uiState.userTrails,
           onGoToSubjectQuest = { subject ->
             onTabSelected(QuestIaTab.QUESTS)
-          }
+          },
+          onOpenSoloTrial = onOpenSoloTrial
         )
         QuestIaTab.HEROIS -> HeroisView(
           customization = uiState.avatarCustomization,
@@ -258,7 +260,7 @@ private fun OnboardingScreen(
           ) {
             Text(text = "🎯", fontSize = 18.sp, modifier = Modifier.padding(end = 8.dp))
             Text(
-              text = "Novo Aprendiz: você começa todas as 4 trilhas em 0%. Cada missão realizada avança a trilha da matéria correspondente (+25%)!",
+              text = "A Trilha de Matemática já inicia em 75% (faltando 1 missão para os 100% e o Rito de Autonomia do ENEM 2025)! Cada missão realizada avança +25%.",
               fontSize = 11.sp,
               color = Color(0xFFD6E4F0),
               lineHeight = 15.sp
@@ -524,7 +526,7 @@ private fun HomeView(
                 letterSpacing = 0.5.sp
               )
               Text(
-                text = "Iniciam em 0% e avançam com cada missão concluída",
+                text = "Matemática em 75% • Conclua 1 missão para a Prova Solo (100%)",
                 fontSize = 10.sp,
                 color = TextMuted
               )
@@ -674,24 +676,51 @@ private fun QuestsView(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Surface(
-              shape = RoundedCornerShape(6.dp),
-              color = tagBgColor,
-              border = BorderStroke(1.dp, subjectColor)
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = tagBgColor,
+                border = BorderStroke(1.dp, subjectColor)
               ) {
-                Text(text = quest.subject.icon, fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                  text = quest.subject.displayName.uppercase(),
-                  fontSize = 10.sp,
-                  fontWeight = FontWeight.Black,
-                  color = subjectColor,
-                  letterSpacing = 1.sp
-                )
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                  Text(text = quest.subject.icon, fontSize = 12.sp)
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = quest.subject.displayName.uppercase(),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    color = subjectColor,
+                    letterSpacing = 1.sp
+                  )
+                }
+              }
+
+              if (quest.enemLabel != null) {
+                Surface(
+                  shape = RoundedCornerShape(6.dp),
+                  color = Color(0xFF2E1A47),
+                  border = BorderStroke(1.dp, Color(0xFFC084FC))
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                  ) {
+                    Text(text = "🏛️", fontSize = 10.sp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                      text = quest.enemLabel!!,
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.Black,
+                      color = Color(0xFFE9D5FF)
+                    )
+                  }
+                }
               }
             }
 
@@ -1279,7 +1308,8 @@ private fun CreateGuildaDialog(
 @Composable
 private fun TrilhasView(
   trails: List<Trail>,
-  onGoToSubjectQuest: (QuestSubject) -> Unit
+  onGoToSubjectQuest: (QuestSubject) -> Unit,
+  onOpenSoloTrial: (QuestSubject) -> Unit = {}
 ) {
   val scrollState = rememberScrollState()
 
@@ -1310,14 +1340,14 @@ private fun TrilhasView(
         Text(text = "⚡", fontSize = 28.sp, modifier = Modifier.padding(end = 12.dp))
         Column {
           Text(
-            text = "PROGRESSÃO CONECTADA ÀS MISSÕES",
+            text = "PROGRESSÃO & RITO DE AUTONOMIA",
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             color = PrimaryCyan,
             letterSpacing = 1.sp
           )
           Text(
-            text = "Cada desafio concluído na aba Quests faz a respectiva matéria progredir (+25%) e eleva o nível da sua trilha.",
+            text = "Ao atingir 100% na trilha, você desbloqueia a Prova Final do ENEM 2025 respondida 100% sozinho, sem nenhuma ajuda de IA!",
             fontSize = 11.sp,
             color = TextMuted,
             lineHeight = 15.sp,
@@ -1338,7 +1368,11 @@ private fun TrilhasView(
         modifier = Modifier
           .fillMaxWidth()
           .padding(bottom = 14.dp)
-          .border(1.dp, subjectColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+          .border(
+            if (trail.progress >= 100) 2.dp else 1.dp,
+            if (trail.progress >= 100) GoldAccent else subjectColor.copy(alpha = 0.35f),
+            RoundedCornerShape(16.dp)
+          ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground)
       ) {
@@ -1381,7 +1415,7 @@ private fun TrilhasView(
               text = "${trail.progress}%",
               fontSize = 14.sp,
               fontWeight = FontWeight.Black,
-              color = subjectColor
+              color = if (trail.progress >= 100) GoldAccent else subjectColor
             )
           }
 
@@ -1394,30 +1428,107 @@ private fun TrilhasView(
               .fillMaxWidth()
               .height(8.dp)
               .clip(RoundedCornerShape(4.dp)),
-            color = subjectColor,
+            color = if (trail.progress >= 100) GoldAccent else subjectColor,
             trackColor = Color(0xFF1E2838)
           )
 
           Spacer(modifier = Modifier.height(12.dp))
 
-          Button(
-            onClick = { onGoToSubjectQuest(trail.subject) },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(38.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-              containerColor = subjectColor.copy(alpha = 0.12f),
-              contentColor = subjectColor
-            ),
-            border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.6f))
-          ) {
-            Text(
-              text = "PRATICAR NESTA TRILHA ⚔️",
-              fontWeight = FontWeight.Black,
-              fontSize = 10.sp,
-              letterSpacing = 1.sp
-            )
+          if (trail.progress >= 100) {
+            Surface(
+              shape = RoundedCornerShape(8.dp),
+              color = Color(0xFF2E1A47),
+              border = BorderStroke(1.dp, Color(0xFFC084FC)),
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+              ) {
+                Text(text = "👑", fontSize = 18.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                  Text(
+                    text = "PORTAL DO MESTRE DESBLOQUEADO (100%)",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFFFDE047)
+                  )
+                  Text(
+                    text = "A voz do Copiloto está selada. Responda sozinho a questão do ENEM 2025 para provar sua autonomia!",
+                    fontSize = 10.sp,
+                    color = Color(0xFFE9D5FF),
+                    lineHeight = 14.sp
+                  )
+                }
+              }
+            }
+
+            Button(
+              onClick = { onOpenSoloTrial(trail.subject) },
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .testTag("solo_trial_button_${trail.subject.name.lowercase()}"),
+              shape = RoundedCornerShape(10.dp),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = GoldAccent,
+                contentColor = Color.Black
+              ),
+              border = BorderStroke(1.dp, Color.White)
+            ) {
+              Text(
+                text = "⚔️ ENCARAR PROVA FINAL SOLO (SEM IA) 🏛️",
+                fontWeight = FontWeight.Black,
+                fontSize = 11.sp,
+                letterSpacing = 0.5.sp
+              )
+            }
+          } else {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Button(
+                onClick = { onGoToSubjectQuest(trail.subject) },
+                modifier = Modifier
+                  .weight(1f)
+                  .height(38.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = subjectColor.copy(alpha = 0.12f),
+                  contentColor = subjectColor
+                ),
+                border = BorderStroke(1.dp, subjectColor.copy(alpha = 0.6f))
+              ) {
+                Text(
+                  text = "PRATICAR NESTA TRILHA ⚔️",
+                  fontWeight = FontWeight.Black,
+                  fontSize = 10.sp,
+                  letterSpacing = 0.5.sp
+                )
+              }
+
+              Button(
+                onClick = { onOpenSoloTrial(trail.subject) },
+                modifier = Modifier.height(38.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = Color(0xFF2E1A47),
+                  contentColor = Color(0xFFE9D5FF)
+                ),
+                border = BorderStroke(1.dp, Color(0xFFC084FC))
+              ) {
+                Text(
+                  text = "PROVA SOLO 🏛️",
+                  fontWeight = FontWeight.Black,
+                  fontSize = 10.sp,
+                  letterSpacing = 0.5.sp
+                )
+              }
+            }
           }
         }
       }

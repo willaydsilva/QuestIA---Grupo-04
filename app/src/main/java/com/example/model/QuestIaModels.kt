@@ -31,8 +31,15 @@ data class Quest(
   val xp: Int,
   val goldReward: Int = 50,
   val isCompleted: Boolean = false,
-  val challengePrompt: String = ""
-)
+  val challengePrompt: String = "",
+  val enemYear: String? = null,
+  val enemQuestionNumber: String? = null
+) {
+  val enemLabel: String?
+    get() = if (enemYear != null) {
+      if (enemQuestionNumber != null) "ENEM $enemYear • Q.$enemQuestionNumber" else "ENEM $enemYear"
+    } else null
+}
 
 data class Guilda(
   val id: String,
@@ -139,7 +146,7 @@ data class Hero(
 object QuestIaData {
 
   val DEFAULT_TRAILS: List<Trail> = listOf(
-    Trail(QuestSubject.MATEMATICA, "Matemática & Lógica Algébrica", 0, "📐", 1),
+    Trail(QuestSubject.MATEMATICA, "Matemática & Lógica Algébrica", 75, "📐", 1),
     Trail(QuestSubject.PORTUGUES, "Português, Gramática & Retórica", 0, "📜", 1),
     Trail(QuestSubject.INGLES, "Inglês Instrumental & Tech", 0, "🌍", 1),
     Trail(QuestSubject.HISTORIA, "História Geral & Cidadania", 0, "🏛️", 1)
@@ -164,41 +171,119 @@ object QuestIaData {
 
   // As 4 Quests requeridas pelo usuário (uma de cada matéria)
   val QUESTS: List<Quest> = listOf(
+    // 1. MATEMÁTICA - ENEM 2025 (Questão 153: Jogo Digital, Herói e Vilões no Plano Cartesiano)
+    Quest(
+      id = "quest_enem_heroi_cartesiano",
+      subject = QuestSubject.MATEMATICA,
+      title = "O Escudo Cartesiano dos Heróis",
+      description = "Em um jogo digital, um herói e dois vilões movem-se no plano cartesiano. O herói só escapa dos ataques se caminhar por uma rota equidistante dos vilões (ponto V(8, 6) e S(6, 2)). Encontre a equação da trajetória da reta de sobrevivência!",
+      xp = 420,
+      goldReward = 75,
+      challengePrompt = "Olá Copiloto da Luz! Desejo encarar a questão 153 do ENEM 2025 sobre a rota equidistante entre herói e vilões no plano cartesiano.",
+      enemYear = "2025",
+      enemQuestionNumber = "153"
+    ),
+
+    // 2. MATEMÁTICA - ENEM 2025 (Questão 148: Fábrica de Tijolos Ecológicos)
+    Quest(
+      id = "quest_enem_tijolos_ecologicos",
+      subject = QuestSubject.MATEMATICA,
+      title = "A Fábrica de Tijolos Ecológicos",
+      description = "3 artesãos trabalhando 6h/dia produzem 720 tijolos ecológicos diários. A fábrica expande para 5 artesãos trabalhando 9h/dia mantendo a mesma taxa por hora. Qual será a nova produção diária?",
+      xp = 380,
+      goldReward = 65,
+      challengePrompt = "Olá Copiloto da Luz! Vamos analisar a questão 148 do ENEM 2025 sobre proporcionalidade e produção de tijolos ecológicos.",
+      enemYear = "2025",
+      enemQuestionNumber = "148"
+    ),
+
+    // 3. MATEMÁTICA - ENEM 2025 (Questão 141: Autonomia e Gás Veicular GNV)
+    Quest(
+      id = "quest_enem_gnv",
+      subject = QuestSubject.MATEMATICA,
+      title = "A Rota Econômica do GNV",
+      description = "Um veículo roda 30 km diários durante os 7 dias da semana e consome 1 m³ de GNV a cada 13 km. Entre os cilindros de 10, 14, 17, 21 e 25 m³, qual é a menor capacidade que garante 1 abastecimento semanal?",
+      xp = 360,
+      goldReward = 60,
+      challengePrompt = "Olá Copiloto da Luz! Desafio oficial ENEM 2025 (Questão 141): qual o menor cilindro de GNV para suprir a autonomia semanal?",
+      enemYear = "2025",
+      enemQuestionNumber = "141"
+    ),
+
+    // 4. PORTUGUÊS - ENEM 2025 (Questão 44: Intertextualidade - Hércules e o Trabalhador)
+    Quest(
+      id = "quest_enem_hercules",
+      subject = QuestSubject.PORTUGUES,
+      title = "Os Doze Trabalhos do Cidadão",
+      description = "Compare o mito grego dos 12 Trabalhos de Hércules com a narrativa do operário brasileiro João Antonio da Silva, que assume múltiplos ofícios. Como a intertextualidade ressignifica a figura heroica?",
+      xp = 340,
+      goldReward = 55,
+      challengePrompt = "Olá Copiloto! Quero analisar a questão 44 do ENEM 2025 sobre intertextualidade entre mitologia e o cotidiano do trabalhador.",
+      enemYear = "2025",
+      enemQuestionNumber = "44"
+    ),
+
+    // 5. PORTUGUÊS - ENEM 2025 (Questão 23: Jargões e Clichês Linguísticos)
+    Quest(
+      id = "quest_enem_jargoes",
+      subject = QuestSubject.PORTUGUES,
+      title = "A Crônica dos Clichês Modernos",
+      description = "Examine a reflexão irônica da autora sobre jargões corporativos e redes sociais ('sair da caixa', 'ressignificar', 'cringe', 'sarrafo alto') e como frases feitas automatizam a fala humana.",
+      xp = 320,
+      goldReward = 50,
+      challengePrompt = "Olá Copiloto! Vamos refletir sobre a questão 23 do ENEM 2025 sobre expressões automatizadas e a crítica linguística.",
+      enemYear = "2025",
+      enemQuestionNumber = "23"
+    ),
+
+    // 6. INGLÊS - ENEM 2025 (Questão 01: Snowflake Generation & Resiliência)
+    Quest(
+      id = "quest_enem_resilience",
+      subject = QuestSubject.INGLES,
+      title = "The Resilience Dilemma",
+      description = "Interprete o texto do The Guardian sobre a 'snowflake generation' nas universidades e por que a verdadeira resiliência emocional exige aprender a lidar com frustrações e críticas.",
+      xp = 330,
+      goldReward = 55,
+      challengePrompt = "Hello Copilot! Let's examine ENEM 2025 Question 01 on English reading comprehension and resilience vs fragility.",
+      enemYear = "2025",
+      enemQuestionNumber = "01"
+    ),
+
+    // 7. HISTÓRIA - ENEM 2025 (Questão 47: A Reforma Eleitoral de 1881 e Exclusão Social)
+    Quest(
+      id = "quest_enem_reforma_eleitoral",
+      subject = QuestSubject.HISTORIA,
+      title = "O Voto e a Reforma Eleitoral de 1881",
+      description = "No Brasil Império, a Lei Saraiva (1881) cortou quase 90% do eleitorado nacional, reduzindo os votantes de 13% para 0,8%. Qual exigência provocou esse brutal retrocesso na participação política?",
+      xp = 360,
+      goldReward = 60,
+      challengePrompt = "Olá Copiloto da Luz! Vamos desvendar a questão 47 do ENEM 2025 sobre cidadania, voto e exclusão eleitoral no Império.",
+      enemYear = "2025",
+      enemQuestionNumber = "47"
+    ),
+
+    // 8. HISTÓRIA / FILOSOFIA - ENEM 2025 (Questão 87: A Pólis Justa de Platão)
+    Quest(
+      id = "quest_enem_platao_polis",
+      subject = QuestSubject.HISTORIA,
+      title = "A Pólis Justa e a Ética do Poder",
+      description = "Na filosofia política clássica de Platão, por que o governo dos filósofos e sábios garante o bem comum enquanto o governo de interesses econômicos particulares degenera a cidade?",
+      xp = 350,
+      goldReward = 55,
+      challengePrompt = "Olá Copiloto! Quero debater a questão 87 do ENEM 2025 sobre a cidade justa de Platão e a relação entre ética e poder.",
+      enemYear = "2025",
+      enemQuestionNumber = "87"
+    ),
+
+    // 9. CLÁSSICA - Álgebra Quadrática
     Quest(
       id = "quest_matematica",
       subject = QuestSubject.MATEMATICA,
       title = "O Enigma das Equações Sagradas",
-      description = "Identifique os coeficientes e calcule o discriminante da equação quadrática para quebrar os grilhões da desatenção e desbloquear a lógica pura.",
+      description = "Identifique os coeficientes e calcule o discriminante da equação quadrática x² + 4x - 11 = 0 para quebrar os grilhões da desatenção e desbloquear a lógica pura.",
       xp = 350,
       goldReward = 60,
       challengePrompt = "Olá Copiloto da Luz! Desejo resolver o enigma matemático da equação de 2º grau x² + 4x - 11 = 0 pelo método socrático."
-    ),
-    Quest(
-      id = "quest_portugues",
-      subject = QuestSubject.PORTUGUES,
-      title = "A Fortaleza das Figuras de Linguagem",
-      description = "Diferencie metáfora, metonímia, hipérbole e antítese para decodificar textos clássicos e articular redações com poder persuasivo nota 1000.",
-      xp = 300,
-      goldReward = 50,
-      challengePrompt = "Olá Copiloto! Quero treinar figuras de linguagem e argumentação para a redação do Enem."
-    ),
-    Quest(
-      id = "quest_ingles",
-      subject = QuestSubject.INGLES,
-      title = "The Global Cyber-Scrolls",
-      description = "Interprete termos de tecnologia em inglês instrumental, falsos amigos (falsos cognatos) e conectivos para dominar a literatura científica global.",
-      xp = 300,
-      goldReward = 50,
-      challengePrompt = "Hello Copilot! Let's practice English reading comprehension, tech vocabulary and false friends for high school!"
-    ),
-    Quest(
-      id = "quest_historia",
-      subject = QuestSubject.HISTORIA,
-      title = "As Crônicas das Revoluções & Cidadania",
-      description = "Analise as causas e os impactos da Revolução Industrial, a luta pelos direitos fundamentais e como a história molda o nosso presente.",
-      xp = 320,
-      goldReward = 55,
-      challengePrompt = "Olá Copiloto! Vamos analisar os marcos históricos da Revolução Industrial e a formação dos direitos humanos e da cidadania."
     )
   )
 

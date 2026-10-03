@@ -19,6 +19,7 @@ import com.example.ui.QuestiaViewModel
 import com.example.ui.components.WisdomAxesDialog
 import com.example.ui.screens.CopilotChatScreen
 import com.example.ui.screens.QuestIaMainScreen
+import com.example.ui.screens.SoloEnemTrialScreen
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -56,8 +57,8 @@ class MainActivity : ComponentActivity() {
 fun QuestiaApp(viewModel: QuestiaViewModel) {
   val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-  // Handle system back button when in chat screen
-  BackHandler(enabled = state.currentScreen == AppScreen.COPILOT_CHAT) {
+  // Handle system back button when in secondary screen
+  BackHandler(enabled = state.currentScreen != AppScreen.QUESTIA_MAIN) {
     viewModel.navigateToMain()
   }
 
@@ -82,7 +83,8 @@ fun QuestiaApp(viewModel: QuestiaViewModel) {
           },
           onGuildaSearchChanged = { viewModel.onGuildaSearchChanged(it) },
           onUpdateAvatarModel3d = { viewModel.updateAvatarModel3d(it) },
-          onCompleteQuest = { viewModel.completeQuestDirectly(it) }
+          onCompleteQuest = { viewModel.completeQuestDirectly(it) },
+          onOpenSoloTrial = { viewModel.openSoloTrial(it) }
         )
       }
       AppScreen.COPILOT_CHAT -> {
@@ -94,6 +96,16 @@ fun QuestiaApp(viewModel: QuestiaViewModel) {
           onQuickPrompt = { viewModel.sendQuickPrompt(it) },
           onOpenWisdomClick = { viewModel.toggleWisdomSheet(true) },
           onDismissVictory = { viewModel.dismissVictoryDialog() }
+        )
+      }
+      AppScreen.SOLO_ENEM_TRIAL -> {
+        SoloEnemTrialScreen(
+          state = state,
+          onBackClick = { viewModel.navigateToMain() },
+          onOptionSelected = { viewModel.onSelectSoloOption(it) },
+          onSubmitAnswer = { viewModel.submitSoloAnswer() },
+          onDismissIncorrect = { viewModel.dismissSoloIncorrectDialog() },
+          onClaimVictory = { viewModel.claimSoloVictory() }
         )
       }
     }

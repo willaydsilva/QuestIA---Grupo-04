@@ -16,7 +16,7 @@ data class UserQuestiaProfile(
   val selectedModelId: String = "hero_arcane",
   val selectedModelTitle: String = "Erudito Arcano",
   val userGuildaId: String? = "g_solar",
-  val trailMatematicaProgress: Int = 0,
+  val trailMatematicaProgress: Int = 75,
   val trailMatematicaLevel: Int = 1,
   val trailPortuguesProgress: Int = 0,
   val trailPortuguesLevel: Int = 1,

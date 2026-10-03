@@ -17,6 +17,8 @@ import com.example.model.MessageSender
 import com.example.model.Quest
 import com.example.model.QuestIaData
 import com.example.model.QuestSubject
+import com.example.model.SoloEnemChallenge
+import com.example.model.SoloEnemData
 import com.example.model.Trail
 import com.example.model.UserAvatarCustomization
 import com.example.model.WisdomAxes
@@ -38,7 +40,8 @@ enum class QuestIaTab {
 
 enum class AppScreen {
   QUESTIA_MAIN,
-  COPILOT_CHAT
+  COPILOT_CHAT,
+  SOLO_ENEM_TRIAL
 }
 
 data class QuestiaUiState(
@@ -67,7 +70,12 @@ data class QuestiaUiState(
   val currentPhase: QuestRiddlePhase = QuestRiddlePhase.COEFFICIENTS,
   val showWisdomSheet: Boolean = false,
   val showVictoryDialog: Boolean = false,
-  val questRewardClaimed: Boolean = false
+  val questRewardClaimed: Boolean = false,
+  // Desafio Final Solo do ENEM 2025 (Sem IA)
+  val activeSoloChallenge: SoloEnemChallenge = SoloEnemData.getChallengeForSubject(QuestSubject.MATEMATICA),
+  val selectedSoloOption: String? = null,
+  val showSoloIncorrectDialog: Boolean = false,
+  val showSoloVictoryDialog: Boolean = false
 ) {
   fun getDisplayName(): String {
     val trimmed = userName.trim()
@@ -143,7 +151,10 @@ class QuestiaViewModel(
 
     val restoredTrails = QuestIaData.DEFAULT_TRAILS.map { trail ->
       when (trail.subject) {
-        QuestSubject.MATEMATICA -> trail.copy(progress = saved.trailMatematicaProgress, level = saved.trailMatematicaLevel)
+        QuestSubject.MATEMATICA -> {
+          val matProg = if (saved.trailMatematicaLevel == 1 && saved.trailMatematicaProgress < 75) 75 else saved.trailMatematicaProgress
+          trail.copy(progress = matProg, level = saved.trailMatematicaLevel)
+        }
         QuestSubject.PORTUGUES -> trail.copy(progress = saved.trailPortuguesProgress, level = saved.trailPortuguesLevel)
         QuestSubject.INGLES -> trail.copy(progress = saved.trailInglesProgress, level = saved.trailInglesLevel)
         QuestSubject.HISTORIA -> trail.copy(progress = saved.trailHistoriaProgress, level = saved.trailHistoriaLevel)
@@ -235,8 +246,14 @@ class QuestiaViewModel(
   }
 
   fun completeOnboarding() {
-    // Ao se registrar, o usuário começa todas as 4 trilhas com 0% e nível 1
-    val initialTrails = QuestIaData.DEFAULT_TRAILS.map { it.copy(progress = 0, level = 1) }
+    // Trilha de Matemática já inicia em 75% (faltando 1 quest para 100%)
+    val initialTrails = QuestIaData.DEFAULT_TRAILS.map { trail ->
+      if (trail.subject == QuestSubject.MATEMATICA) {
+        trail.copy(progress = 75, level = 1)
+      } else {
+        trail.copy(progress = 0, level = 1)
+      }
+    }
     _uiState.update {
       it.copy(
         isRegistered = true,
@@ -272,11 +289,17 @@ class QuestiaViewModel(
   }
 
   fun startQuest(quest: Quest) {
+    val enemHeader = if (quest.enemLabel != null) {
+      "🏛️ **[DESAFIO OFICIAL DO ${quest.enemLabel?.uppercase()}]**\n\n"
+    } else {
+      ""
+    }
+
     val questIntroMessage = ChatMessage(
       id = UUID.randomUUID().toString(),
       sender = MessageSender.COPILOT,
-      text = "⚔️ **MISSÃO INICIADA: ${quest.title}** (${quest.subject.displayName})\n\n${quest.description}\n\nEstou pronto para guiá-lo pelo método socrático! Por onde deseja começar nossa reflexão?",
-      equationHighlight = quest.title
+      text = "⚔️ **MISSÃO INICIADA: ${quest.title}** (${quest.subject.displayName})\n\n$enemHeader${quest.description}\n\n💡 *Como seu mentor socrático da luz, não lhe darei respostas prontas nem fórmulas diretas de início: vamos construir o raciocínio juntos!*\n\nPara começarmos: **Qual é a pergunta central desse desafio e quais pistas ou dados principais foram informados?**",
+      equationHighlight = quest.enemLabel ?: quest.title
     )
 
     _uiState.update {
@@ -395,12 +418,14 @@ class QuestiaViewModel(
 
   // Progressão da trilha baseada na quest concluída
   fun advanceSubjectTrail(subject: QuestSubject, xpReward: Int) {
+    var reached100Percent = false
     _uiState.update { state ->
       val updatedTrails = state.userTrails.map { trail ->
         if (trail.subject == subject) {
-          val newProgress = trail.progress + 25
+          val newProgress = (trail.progress + 25).coerceAtMost(100)
           if (newProgress >= 100) {
-            trail.copy(progress = newProgress % 100, level = trail.level + 1)
+            reached100Percent = true
+            trail.copy(progress = 100)
           } else {
             trail.copy(progress = newProgress)
           }
@@ -415,7 +440,6 @@ class QuestiaViewModel(
         trails = updatedTrails
       )
 
-      // Também adiciona XP para a guilda do usuário se houver
       val updatedGuildas = state.guildas.map { g ->
         if (g.id == state.userGuildaId) g.copy(totalXp = g.totalXp + xpReward)
         else g
@@ -428,6 +452,91 @@ class QuestiaViewModel(
       )
     }
     persistCurrentState()
+
+    // Quando o aluno chega a 100% da trilha, abre automaticamente a Prova Final Solo sem ajuda do Copiloto
+    if (reached100Percent) {
+      openSoloTrial(subject)
+    }
+  }
+
+  // Desafio Final Solo do ENEM 2025 (Rito de Autonomia sem IA)
+  fun openSoloTrial(subject: QuestSubject) {
+    val challenge = SoloEnemData.getChallengeForSubject(subject)
+    _uiState.update {
+      it.copy(
+        activeSoloChallenge = challenge,
+        selectedSoloOption = null,
+        showSoloIncorrectDialog = false,
+        showSoloVictoryDialog = false,
+        currentScreen = AppScreen.SOLO_ENEM_TRIAL
+      )
+    }
+  }
+
+  fun onSelectSoloOption(letter: String) {
+    _uiState.update { it.copy(selectedSoloOption = letter) }
+  }
+
+  fun submitSoloAnswer() {
+    val state = _uiState.value
+    val selected = state.selectedSoloOption ?: return
+    val challenge = state.activeSoloChallenge
+
+    if (selected.equals(challenge.correctOption, ignoreCase = true)) {
+      // O aluno provou autonomia e acertou sozinho!
+      val updatedTrails = state.userTrails.map { trail ->
+        if (trail.subject == challenge.subject) {
+          // Trilha sobe de nível (Level Up) e reinicia o ciclo
+          trail.copy(progress = 0, level = trail.level + 1)
+        } else trail
+      }
+
+      val newXp = state.currentHero.xp + challenge.xpReward
+      val newGold = state.currentHero.gold + challenge.goldReward
+      val updatedHero = state.currentHero.copy(
+        xp = newXp,
+        gold = newGold,
+        level = 1 + (newXp / 100),
+        trails = updatedTrails
+      )
+
+      val currentAxes = state.character.wisdomAxes
+      val boostedAxes = currentAxes.copy(
+        autonomia = (currentAxes.autonomia + 40).coerceIn(0, 100),
+        acerto = (currentAxes.acerto + 30).coerceIn(0, 100),
+        argumentacao = (currentAxes.argumentacao + 25).coerceIn(0, 100)
+      )
+
+      _uiState.update {
+        it.copy(
+          userTrails = updatedTrails,
+          currentHero = updatedHero,
+          character = it.character.copy(wisdomAxes = boostedAxes),
+          showSoloVictoryDialog = true,
+          showSoloIncorrectDialog = false
+        )
+      }
+      persistCurrentState()
+    } else {
+      // Errou, mas não há problema: o Copiloto acolhe e incentiva tentar novamente
+      _uiState.update {
+        it.copy(showSoloIncorrectDialog = true)
+      }
+    }
+  }
+
+  fun dismissSoloIncorrectDialog() {
+    _uiState.update { it.copy(showSoloIncorrectDialog = false) }
+  }
+
+  fun claimSoloVictory() {
+    _uiState.update {
+      it.copy(
+        showSoloVictoryDialog = false,
+        currentScreen = AppScreen.QUESTIA_MAIN,
+        activeTab = QuestIaTab.TRILHAS
+      )
+    }
   }
 
   fun sendQuickPrompt(promptText: String) {
