@@ -1,0 +1,6 @@
+{
+  "name": "QuestIA",
+  "description": "Plataforma educacional gamificada de RPG anti-brain rot com missões em matérias essenciais, guildas escolares, personagens 3D e Copiloto Socrático.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
